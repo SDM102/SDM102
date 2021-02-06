@@ -64,31 +64,6 @@ def load_data(path, name='BlogCatalog', exp_id='0', original_X=False, extra_str=
     #print("A:",A.todense())
     return X, A, T, Y1, Y0
 
-def load_amazon():
-    data = np.loadtxt('./new_datasets/Amazon/AmazonItmFeatures_neg.csv', delimiter=',')
-    X = csc_matrix(data[:, 5:])
-    T = data[:, 0].reshape(1, -1)
-    y,y_cf = data[:, 1][:, np.newaxis].reshape(1, -1), data[:, 2][:, np.newaxis].reshape(1, -1)
-    y = y
-    y_cf = y_cf
-    Y1 = np.where(T > 0, y, y_cf)
-    Y0 = np.where(T > 0, y_cf, y)
-    A = load_npz('./new_datasets/Amazon/new_product_graph_neg.npz')
-    A = coo_matrix(A)
-    # print(type(A),A.todense().shape)
-    # print(A.todense()[0].sum(axis=1))
-    A_new = np.zeros((14538, 14538))
-    row = A.row
-    col = A.col
-    A = A.todense()
-    for i in range(len(row)):
-        #if row[i]%2==0:
-        A_new[row[i], col[i]] = 1
-        A_new[col[i], row[i]] = 1
-
-    # print(len(coo_matrix(A_new).col))
-    A = csc_matrix(A_new)
-    return X, A, T, Y1, Y0
 
 def wasserstein(x, y, p=0.5, lam=10, its=10, sq=False, backpropT=False, cuda=False):
     """return W dist between x and y"""
