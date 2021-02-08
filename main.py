@@ -164,7 +164,7 @@ def train(epoch, X, A, T, Y1, Y0, idx_train, idx_val, model, optimizer):
               'mae_ate_trainn: {:.4f}'.format(mae_ate_train.item()),
               'pehe_val: {:.4f}'.format(pehe_val.item()),
               'mae_ate_val: {:.4f}'.format(mae_ate_val.item()),
-              'time: {:.4f}s'.format(time.time() - t),"treatment loss:{:.4f}".format(Crossentropy_loss(p1[idx_train],T[idx_train])))
+              'time: {:.4f}s'.format(time.time() - t))
 
 
 def eva(X, A, T, Y1, Y0, idx_train, idx_test, model, i_exp):
@@ -187,11 +187,9 @@ def eva(X, A, T, Y1, Y0, idx_train, idx_test, model, i_exp):
     # Y1, Y0 = torch.where(T>0, YF, YCF), torch.where(T>0, YCF, YF)
     pehe_ts = torch.sqrt(loss((y1_pred - y0_pred)[idx_test], (Y1 - Y0)[idx_test]))
     mae_ate_ts = torch.abs(torch.mean((y1_pred - y0_pred)[idx_test]) - torch.mean((Y1 - Y0)[idx_test]))
-    mae_ate_ts2 = torch.mean(torch.abs((y1_pred - y0_pred)[idx_test] - (Y1 - Y0)[idx_test]))
     print("Test set results:",
           "pehe_ts= {:.4f}".format(pehe_ts.item()),
-          "mae_ate_ts= {:.4f}".format(mae_ate_ts.item()),
-          "mae_ate_ts2= {:.4f}".format(mae_ate_ts2.item()))
+          "mae_ate_ts= {:.4f}".format(mae_ate_ts.item()))
 
     of_path = './new_results/' + args.dataset + args.extrastr + '/' + str(args.tr)
 
@@ -237,7 +235,6 @@ if __name__ == '__main__':
         for epoch in range(args.epochs):
             train(epoch, X, A, T, Y1, Y0, idx_train, idx_val, model, optimizer)
             #curr_att = model.a#.cpu().detach().numpy()
-            #print("att是否相等:", (curr_att==last_att).all())
             #print("max:",curr_att.max(1))
             #last_att = curr_att
             #print((model.att*(A.to_dense())).cpu().detach().numpy().max())
