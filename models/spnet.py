@@ -112,7 +112,7 @@ class GCN_DECONF(nn.Module):
         y1 = self.out_t11(y10).view(-1)
 
         # print(t.shape,y1.shape,y0.shape)
-        y = torch.where(t > 0, y1, y0)  # t>0的地方保存y1，否则保存y0
+        y = torch.where(t > 0, y1, y0)  
 
         # p1 = self.pp_act(self.pp(rep)).view(-1)
         # treatment = treatment.view(-1)
