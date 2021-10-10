@@ -6,18 +6,18 @@ import torch
 # import torch.nn.functional as F
 import torch.optim as optim
 
-from models.spnet import GCN_DECONF
+from models.spnet2 import GCN_DECONF
 import utils
 # from scipy import sparse as sp
 import csv
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 # Training settings
 parser = argparse.ArgumentParser()
 parser.add_argument('--nocuda', type=int, default=0,
                     help='Disables CUDA training...................')
 parser.add_argument('--dataset', type=str, default='BlogCatalog')
-parser.add_argument('--extrastr', type=str, default='0.5')
+parser.add_argument('--extrastr', type=str, default='0.2')
 
 parser.add_argument('--seed', type=int, default=79, help='Random seed.')
 parser.add_argument('--epochs', type=int, default=400,
@@ -26,7 +26,7 @@ parser.add_argument('--lr', type=float, default=0.01,
                     help='Initial learning rate.')
 parser.add_argument('--weight_decay', type=float, default=1e-4,
                     help='Weight decay (L2 loss on parameters).')
-parser.add_argument('--hidden', type=int, default=200,
+parser.add_argument('--hidden', type=int, default=400,
                     help='Number of hidden units.')
 parser.add_argument('--dropout', type=float, default=0.1,
                     help='Dropout rate (1 - keep probability).')
@@ -70,7 +70,6 @@ def prepare(i_exp):
     X, A, T, Y1, Y0 = utils.load_data(args.path, name=args.dataset, original_X=False, exp_id=str(i_exp),
                                  extra_str=args.extrastr)
     #X, A, T, Y1, Y0 = utils.load_amazon()
-
     n = X.shape[0]
     n_train = int(n * args.tr)
     n_test = int(n * 0.2)
@@ -187,6 +186,7 @@ def eva(X, A, T, Y1, Y0, idx_train, idx_test, model, i_exp):
     # Y1, Y0 = torch.where(T>0, YF, YCF), torch.where(T>0, YCF, YF)
     pehe_ts = torch.sqrt(loss((y1_pred - y0_pred)[idx_test], (Y1 - Y0)[idx_test]))
     mae_ate_ts = torch.abs(torch.mean((y1_pred - y0_pred)[idx_test]) - torch.mean((Y1 - Y0)[idx_test]))
+    mae_ate_ts2 = torch.mean(torch.abs((y1_pred - y0_pred)[idx_test] - (Y1 - Y0)[idx_test]))
     print("Test set results:",
           "pehe_ts= {:.4f}".format(pehe_ts.item()),
           "mae_ate_ts= {:.4f}".format(mae_ate_ts.item()))
