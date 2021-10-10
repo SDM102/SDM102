@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pygcn.layers import GraphConvolution
+s=0.0001
 import numpy as np
 
 class GCN_DECONF(nn.Module):
@@ -31,14 +32,14 @@ class GCN_DECONF(nn.Module):
         self.n = n
         if cuda:
 
-            self.out_t00 = [nn.Linear(2 * nhid, nhid).cuda() for i in range(n_out)]
-            self.out_t10 = [nn.Linear(2 * nhid, nhid).cuda() for i in range(n_out)]
+            self.out_t00 = [nn.Linear( nhid+1, nhid).cuda() for i in range(n_out)]
+            self.out_t10 = [nn.Linear( nhid+1, nhid).cuda() for i in range(n_out)]
             self.out_t01 = nn.Linear(nhid, 1).cuda()
             self.out_t11 = nn.Linear(nhid, 1).cuda()
 
         else:
-            self.out_t00 = [nn.Linear(2 * nhid, nhid) for i in range(n_out)]
-            self.out_t10 = [nn.Linear(2 * nhid, nhid) for i in range(n_out)]
+            self.out_t00 = [nn.Linear(nhid+1, nhid) for i in range(n_out)]
+            self.out_t10 = [nn.Linear(nhid+1, nhid) for i in range(n_out)]
             self.out_t01 = nn.Linear(nhid, 1)
             self.out_t11 = nn.Linear(nhid, 1)
 
@@ -59,8 +60,6 @@ class GCN_DECONF(nn.Module):
         #nn.init.xavier_uniform_(self.att_p.data, gain=0)
 
     def forward(self, x, adj, t, cuda=False):
-        # print("adj:",adj.to_dense()+torch.eye(x.shape[0]).cuda())
-        # print("adj:",adj.to_dense())
         adj_dense = adj.to_dense()
         rep_outcome = F.relu(self.gc[0](x, adj))
         rep_outcome = F.dropout(rep_outcome, self.dropout, training=self.training)
@@ -73,9 +72,6 @@ class GCN_DECONF(nn.Module):
         for i in range(1, self.n_in):
             rep_treatment = F.relu(self.gc_t[i](rep_treatment, adj))
             rep_treatment = F.dropout(rep_treatment, self.dropout, training=self.training)
-        #treatment_MLP = self.pp(rep_treatment)
-        #treatment = self.pp2(treatment_MLP)
-        #att_p = F.softmax(self.att_p * adj_dense, dim=1)
         rep_out_treat = torch.cat((rep_outcome, rep_treatment), 1)
         rep = rep_out_treat
         att_final = torch.zeros(self.n, self.n).cuda()
@@ -84,19 +80,18 @@ class GCN_DECONF(nn.Module):
         att_input = torch.cat((rep[index[0, :], :], rep[index[1, :], :]), dim=1)
         # print(type(att_input))
         attention = torch.matmul(att_input, self.a).squeeze()
+        #print("attention:", attention.dtype)
         att_final = att_final.index_put(tuple(index), attention)
         att_final = F.softmax(att_final, dim=1)
-        # print("attention:",att_final)
-        # print("attention:",att_final)
         att_final = F.dropout(att_final, self.dropout, training=self.training)
         treatment_cur = rep_treatment
-        #rep_treatment = torch.matmul(att_final, rep_outcome) + rep_treatment
         rep_outcome = torch.matmul(att_final, treatment_cur) + rep_outcome
+        N = adj_dense.sum(dim=1)#+0.00000001
+        treat_adj = torch.matmul(adj_dense.float(), t.reshape(-1,1).float()).squeeze()
+        dim_treat = s*torch.div(treat_adj, N).reshape(-1,1)  # using s to control the contribution magnitude of the exposure variable on outcome
         treatment_MLP = self.pp(rep_treatment)
         treatment = self.pp_act(self.pp2(treatment_MLP))
-        #treatment = self.pp2(treatment_MLP)
-        h_prime = torch.cat((rep_outcome,rep_treatment),1)
-        #h_prime = F.relu(torch.matmul(att_final, rep)) + rep
+        h_prime= torch.cat((rep_outcome, dim_treat), 1)
         h_prime = F.dropout(h_prime, self.dropout, training=self.training)
         rep = h_prime
         rep0 = rep
@@ -112,7 +107,7 @@ class GCN_DECONF(nn.Module):
         y1 = self.out_t11(y10).view(-1)
 
         # print(t.shape,y1.shape,y0.shape)
-        y = torch.where(t > 0, y1, y0)  
+        y = torch.where(t > 0, y1, y0) 
 
         # p1 = self.pp_act(self.pp(rep)).view(-1)
         # treatment = treatment.view(-1)
