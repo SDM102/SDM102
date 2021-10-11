@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pygcn.layers import GraphConvolution
-s=0.0001
 import numpy as np
 
 class GCN_DECONF(nn.Module):
