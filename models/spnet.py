@@ -32,8 +32,8 @@ class GCN_DECONF(nn.Module):
         self.n = n
         if cuda:
 
-            self.out_t00 = [nn.Linear( nhid+1, nhid).cuda() for i in range(n_out)]
-            self.out_t10 = [nn.Linear( nhid+1, nhid).cuda() for i in range(n_out)]
+            self.out_t00 = [nn.Linear( nhid, nhid).cuda() for i in range(n_out)]
+            self.out_t10 = [nn.Linear( nhid, nhid).cuda() for i in range(n_out)]
             self.out_t01 = nn.Linear(nhid, 1).cuda()
             self.out_t11 = nn.Linear(nhid, 1).cuda()
 
@@ -85,14 +85,11 @@ class GCN_DECONF(nn.Module):
         att_final = F.softmax(att_final, dim=1)
         att_final = F.dropout(att_final, self.dropout, training=self.training)
         treatment_cur = rep_treatment
-        rep_outcome = torch.matmul(att_final, treatment_cur) + rep_outcome
-        N = adj_dense.sum(dim=1)#+0.00000001
-        treat_adj = torch.matmul(adj_dense.float(), t.reshape(-1,1).float()).squeeze()
-        dim_treat = s*torch.div(treat_adj, N).reshape(-1,1)  # using s to control the contribution magnitude of the exposure variable on outcome
+        rep_outcome = torch.matmul(att_final, treatment_cur) + rep_outcome 
         treatment_MLP = self.pp(rep_treatment)
         treatment = self.pp_act(self.pp2(treatment_MLP))
-        h_prime= torch.cat((rep_outcome, dim_treat), 1)
-        h_prime = F.dropout(h_prime, self.dropout, training=self.training)
+        #h_prime= torch.cat((rep_outcome, dim_treat), 1)
+        h_prime = F.dropout(rep_outcome, self.dropout, training=self.training)
         rep = h_prime
         rep0 = rep
         rep1 = rep
@@ -107,7 +104,7 @@ class GCN_DECONF(nn.Module):
         y1 = self.out_t11(y10).view(-1)
 
         # print(t.shape,y1.shape,y0.shape)
-        y = torch.where(t > 0, y1, y0) 
+        y = torch.where(t > 0, y1, y0)  # t>0的地方保存y1，否则保存y0
 
         # p1 = self.pp_act(self.pp(rep)).view(-1)
         # treatment = treatment.view(-1)
